@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: kenchan0130/actions-system-info@master
       id: system-info
 
@@ -57,4 +57,3 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: build
-
