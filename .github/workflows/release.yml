@@ -18,7 +18,7 @@ jobs:
           os: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - if: startsWith(matrix.os, 'ubuntu')
       run: |
@@ -86,4 +86,3 @@ jobs:
         branch: master-bin
         directory: master-bin
         force: true
-
