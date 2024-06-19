@@ -677,7 +677,7 @@ pub async fn maybe_println_lot<W: Write>(
     let current_value = current_value
         .map(|current_value| {
             format!(
-                "value: ${}{}",
+                "value: {:>14}{}",
                 current_value.separated_string_with_fixed_place(2),
                 liquidity_ui_amount
             )
@@ -691,7 +691,7 @@ pub async fn maybe_println_lot<W: Write>(
     };
 
     let msg = format!(
-        "{:>5}. {} | {:>20} at ${:<6} | {:<35} | income: ${:<11} | {} gain: ${:<14}{} {}",
+        "{:>5}. {} | {:>10} at {:>6} | {} | income: {:>11} | {} gain: {:>14}{} {}",
         lot.lot_number,
         lot.acquisition.when,
         token.format_ui_amount(ui_amount),
