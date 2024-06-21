@@ -1438,7 +1438,7 @@ async fn process_account_list(
                 account.address,
                 account.token,
                 account.token.symbol(),
-                ui_amount.separated_string_with_fixed_place(2),
+                ui_amount.separated_string_with_fixed_place(9),
                 liquidity_ui_amount,
                 account.description
             );

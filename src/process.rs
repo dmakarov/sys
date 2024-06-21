@@ -691,7 +691,7 @@ pub async fn maybe_println_lot<W: Write>(
     };
 
     let msg = format!(
-        "{:>5}. {} | {:>10} at {:>6} | {} | income: {:>11} | {} gain: {:>14}{} {}",
+        "{:>5}. {} | {:>17} at {:>6} | {} | income: {:>11} | {} gain: {:>14}{} {}",
         lot.lot_number,
         lot.acquisition.when,
         token.format_ui_amount(ui_amount),
