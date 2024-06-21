@@ -1567,7 +1567,7 @@ async fn maybe_println_lot(
     };
 
     let msg = format!(
-        "{:>5}. {} | {:>10} at {:>6} | {} | income: {:>11} | {} gain: {:>14}{} {}",
+        "{:>5}. {} | {:>17} at {:>6} | {} | income: {:>11} | {} gain: {:>14}{} {}",
         lot.lot_number,
         lot.acquisition.when,
         token.format_ui_amount(ui_amount),
@@ -2019,7 +2019,7 @@ async fn process_account_list(
                 account.address,
                 account.token,
                 account.token.symbol(),
-                ui_amount.separated_string_with_fixed_place(2),
+                ui_amount.separated_string_with_fixed_place(9),
                 liquidity_ui_amount,
                 account.description
             );
