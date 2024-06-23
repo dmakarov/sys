@@ -1310,13 +1310,13 @@ fn print_current_holdings(
 
         if held_token.fiat_fungible() {
             println!(
-                "  {:<7}       {:<20}",
+                "  {:<7}       {:<22}",
                 held_token.to_string(),
                 held_token.format_amount(*total_held_amount)
             );
         } else {
             println!(
-                "  {:<7}       {:<20} [{}; ${:>4} per {:>4}{}]",
+                "  {:<7}       {:<22} [{}; ${:>4} per {:>4}{}]",
                 held_token.to_string(),
                 held_token.format_amount(*total_held_amount),
                 total_value
