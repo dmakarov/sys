@@ -1342,6 +1342,93 @@ fn print_current_holdings(
     println!();
 }
 
+fn merge_lots(
+    db: &mut Db,
+    account_filter: Option<Pubkey>,
+    verbose: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut accounts = db.get_accounts();
+    accounts.sort_by(|a, b| {
+        let mut result = a.last_update_balance.cmp(&b.last_update_balance);
+        if result == std::cmp::Ordering::Equal {
+            result = a.address.cmp(&b.address);
+        }
+        if result == std::cmp::Ordering::Equal {
+            result = a.description.cmp(&b.description);
+        }
+        result
+    });
+    for account in accounts.iter_mut() {
+        if let Some(ref account_filter) = account_filter {
+            if account.address != *account_filter {
+                continue;
+            }
+        }
+        if account.lots.is_empty() {
+            continue;
+        }
+        account
+            .lots
+            .sort_by(|a, b| a.acquisition.when.cmp(&b.acquisition.when));
+        let mut lot_num = 0;
+        while lot_num < account.lots.len() - 1 {
+            let next_lot = account.lots.get(lot_num + 1).unwrap().clone();
+            let next_price = next_lot.acquisition.price();
+            let next_lot_number = next_lot.lot_number;
+            let this_lot = account.lots.get_mut(lot_num).unwrap();
+            let this_price = this_lot.acquisition.price();
+            let this_lot_number = this_lot.lot_number;
+            if this_lot.acquisition.when == next_lot.acquisition.when && this_price == next_price {
+                this_lot.amount += next_lot.amount;
+                account.lots.remove(lot_num + 1);
+                if verbose {
+                    println!(
+                        "merged lot {} into lot {}",
+                        next_lot_number, this_lot_number,
+                    );
+                }
+            } else {
+                lot_num += 1;
+            }
+        }
+        db.update_account(account.clone())?;
+    }
+    if account_filter.is_none() {
+        let mut disposed_lots = db.disposed_lots();
+        let mut lot_num = 0;
+        while lot_num < disposed_lots.len() - 1 {
+            let next_lot = disposed_lots.get(lot_num + 1).unwrap().clone();
+            let next_price = next_lot.price();
+            let next_lot_number = next_lot.lot.lot_number;
+            let next_lot_acq_when = next_lot.lot.acquisition.when;
+            let next_lot_acq_price = next_lot.lot.acquisition.price();
+            let this_lot = disposed_lots.get_mut(lot_num).unwrap();
+            let this_price = this_lot.price();
+            let this_lot_number = this_lot.lot.lot_number;
+            let this_lot_acq_when = this_lot.lot.acquisition.when;
+            let this_lot_acq_price = this_lot.lot.acquisition.price();
+            if this_lot.when == next_lot.when
+                && this_price == next_price
+                && this_lot_acq_when == next_lot_acq_when
+                && this_lot_acq_price == next_lot_acq_price
+            {
+                this_lot.lot.amount += next_lot.lot.amount;
+                disposed_lots.remove(lot_num + 1);
+                if verbose {
+                    println!(
+                        "merged disposed lot {} into disposed lot {}",
+                        next_lot_number, this_lot_number,
+                    );
+                }
+            } else {
+                lot_num += 1;
+            }
+        }
+        db.update_disposed_lots(disposed_lots)?;
+    }
+    Ok(())
+}
+
 async fn process_account_list(
     db: &Db,
     rpc_client: &RpcClient,
@@ -3781,6 +3868,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         .validator(is_valid_pubkey)
                                         .help("Address to receive the lot"),
                                 )
+                        )
+                        .subcommand(
+                            SubCommand::with_name("merge")
+                                .about("Merge lots with same data and price into a single lot. \
+                                        Useful to reduce the entropy")
+                                .arg(
+                                    Arg::with_name("account")
+                                        .value_name("ADDRESS")
+                                        .takes_value(true)
+                                        .validator(is_valid_pubkey)
+                                        .help("Do the merging for this account only"),
+                                )
                         ),
                 ),
         )
@@ -4633,6 +4732,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     for lot_number in lot_numbers {
                         db.delete_lot(lot_number)?;
                     }
+                }
+                ("merge", Some(arg_matches)) => {
+                    let account_filter = pubkey_of(arg_matches, "account");
+                    merge_lots(&mut db, account_filter, verbose)?;
                 }
                 _ => unreachable!(),
             },

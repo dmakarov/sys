@@ -1474,6 +1474,11 @@ impl Db {
         self.save()
     }
 
+    pub fn update_disposed_lots(&mut self, disposed_lots: Vec<DisposedLot>) -> DbResult<()> {
+        self.data.disposed_lots = disposed_lots;
+        self.save()
+    }
+
     fn remove_account_no_save(&mut self, address: Pubkey, token: MaybeToken) -> DbResult<()> {
         let position = self
             .get_account_position(address, token)
