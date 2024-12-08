@@ -2836,6 +2836,69 @@ async fn process_account_xls(
     Ok(())
 }
 
+async fn process_account_csv(
+    db: &Db,
+    outfile: &str,
+    filter_by_year: Option<i32>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use csv::Writer;
+
+    let mut wtr = Writer::from_path(outfile)?;
+    let mut disposed_lots = db.disposed_lots();
+    disposed_lots.sort_by_key(|lot| lot.when);
+
+    if let Some(year) = filter_by_year {
+        // Exclude disposed lots that were neither acquired nor disposed of in the filter year
+        disposed_lots.retain(|disposed_lot| {
+            (disposed_lot.lot.acquisition.when.year() == year
+             && disposed_lot.lot.income(disposed_lot.token) > 0.)
+                || disposed_lot.when.year() == year
+        })
+    }
+    wtr.write_record(&[
+        "Token",
+        "Amount",
+        "Income (USD)",
+        "Cap Gain (USD)",
+        "Acq. Date",
+        "Acq. Cost (USD)",
+        "Sale Date",
+        "Sale Proceedings (USD)",
+        "Acquisition Description",
+        "Sale Description"
+    ])?;
+
+    for disposed_lot in disposed_lots {
+        let mut income = disposed_lot.lot.income(disposed_lot.token);
+        if let Some(year) = filter_by_year {
+            if disposed_lot.lot.acquisition.when.year() != year {
+                income = 0. // Exclude income from other years
+            }
+        }
+        let cost = Decimal::from_u64(disposed_lot.lot.amount).unwrap()
+            * disposed_lot.lot.acquisition.price() / Decimal::from_f64(1e9).unwrap();
+        let proceedings = Decimal::from_u64(disposed_lot.lot.amount).unwrap()
+            * disposed_lot.price() / Decimal::from_f64(1e9).unwrap();
+        wtr.write_record(&[
+            disposed_lot.token.to_string(),
+            format!("{:.9}", disposed_lot.token.ui_amount(disposed_lot.lot.amount)),
+            format!("{:.9}", income),
+            format!("{:.9}", disposed_lot.lot.cap_gain(disposed_lot.token, disposed_lot.price())),
+            disposed_lot.lot.acquisition.when.to_string(),
+            format!("{:.9}", cost),
+            disposed_lot.when.to_string(),
+            format!("{:.9}", proceedings),
+            disposed_lot.lot.acquisition.kind.to_string(),
+            disposed_lot.kind.to_string()
+        ])?;
+    }
+
+    wtr.flush()?;
+    println!("Wrote {outfile}");
+
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn process_account_merge<T: Signers>(
     db: &mut Db,
@@ -4687,6 +4750,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ),
                 )
                 .subcommand(
+                    SubCommand::with_name("csv")
+                        .about("Export a CSV file")
+                        .arg(
+                            Arg::with_name("outfile")
+                                .value_name("FILEPATH")
+                                .takes_value(true)
+                                .help(".csv file to write"),
+                        )
+                        .arg(
+                            Arg::with_name("year")
+                                .long("year")
+                                .value_name("YYYY")
+                                .takes_value(true)
+                                .validator(is_parsable::<usize>)
+                                .help("Limit export to realized gains affecting the given year"),
+                        ),
+                )
+                .subcommand(
                     SubCommand::with_name("remove")
                         .about("Unregister an account")
                         .alias("delete")
@@ -6148,6 +6229,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let outfile = value_t_or_exit!(arg_matches, "outfile", String);
                 let filter_by_year = value_t!(arg_matches, "year", i32).ok();
                 process_account_xls(&db, &outfile, filter_by_year).await?;
+            }
+            ("csv", Some(arg_matches)) => {
+                let outfile = value_t_or_exit!(arg_matches, "outfile", String);
+                let filter_by_year = value_t!(arg_matches, "year", i32).ok();
+                process_account_csv(&db, &outfile, filter_by_year).await?;
             }
             ("remove", Some(arg_matches)) => {
                 let address = pubkey_of(arg_matches, "address").unwrap();
