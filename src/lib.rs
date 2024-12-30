@@ -15,6 +15,7 @@ pub mod amount;
 pub mod binance_exchange;
 pub mod coin_gecko;
 pub mod coinbase_exchange;
+pub mod commands;
 pub mod db;
 pub mod exchange;
 pub mod field_as_string;
