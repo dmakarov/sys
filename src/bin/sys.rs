@@ -38,6 +38,7 @@ use {
     },
     sys::{
         amount::Amount,
+        commands::Commands,
         exchange::{self, *},
         get_transaction_balance_change::*,
         metrics::{self, dp, MetricsConfig},
@@ -5676,40 +5677,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         exit(1)
     });
 
+    let commands = Commands::new(
+        value_t_or_exit!(app_matches, "json_rpc_url", String),
+        value_t!(app_matches, "send_json_rpc_urls", String).ok(),
+        value_t!(app_matches, "helius_json_rpc_url", String).ok(),
+        verbose,
+    );
+
     match app_matches.subcommand() {
         ("price", Some(arg_matches)) => {
             let when = value_t!(arg_matches, "when", String)
                 .map(|s| naivedate_of(&s).unwrap())
                 .ok();
-            let token = MaybeToken::from(value_t!(arg_matches, "token", Token).ok());
-
-            let (price, verbose_msg) = if let Some(when) = when {
-                (
-                    token.get_historical_price(rpc_client, when).await?,
-                    format!("Historical {token} price on {when}"),
-                )
-            } else {
-                (
-                    token.get_current_price(rpc_client).await?,
-                    format!("Current {token} price"),
-                )
-            };
-
-            if verbose {
-                println!("{verbose_msg}: ${price:.6}");
-
-                if let Some(liquidity_token) = token.liquidity_token() {
-                    let rate = token.get_current_liquidity_token_rate(rpc_client).await?;
-                    println!(
-                        "Liquidity token: {} (rate: {}, inv: {})",
-                        liquidity_token,
-                        rate,
-                        Decimal::from_usize(1).unwrap() / rate
-                    );
-                }
-            } else {
-                println!("{price:.6}");
-            }
+            let token = value_t!(arg_matches, "token", Token).ok();
+            commands.price(token, when).await?;
         }
         ("sync", Some(arg_matches)) => {
             let max_epochs_to_process = value_t!(arg_matches, "max_epochs_to_process", u64).ok();
