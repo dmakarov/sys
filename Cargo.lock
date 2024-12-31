@@ -5379,7 +5379,7 @@ dependencies = [
  "kraken_sdk_rest",
  "lazy_static",
  "log",
- "num-derive 0.3.3",
+ "num-derive 0.4.2",
  "num-traits",
  "pickledb",
  "reqwest",
