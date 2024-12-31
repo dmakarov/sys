@@ -1929,7 +1929,14 @@ async fn process_account_cost_basis(
 }
 
 fn print_current_holdings(
-    held_tokens: &BTreeMap::<MaybeToken, (/*price*/ Option<Decimal>, /*amount*/ u64, RealizedGain)>,
+    held_tokens: &BTreeMap<
+        MaybeToken,
+        (
+            /*price*/ Option<Decimal>,
+            /*amount*/ u64,
+            RealizedGain,
+        ),
+    >,
     tax_rate: Option<&TaxRate>,
 ) {
     println!("Current Holdings");
@@ -1957,8 +1964,7 @@ fn print_current_holdings(
         .collect::<Vec<_>>();
 
     // Order current holdings by `total_value`
-    held_tokens
-        .sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    held_tokens.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
     for (held_token, total_value, current_token_price, total_held_amount, unrealized_gain) in
         held_tokens
@@ -2017,7 +2023,11 @@ fn print_current_holdings(
     println!();
 }
 
-fn merge_lots(db: &mut Db, account_filter: Option<Pubkey>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn merge_lots(
+    db: &mut Db,
+    account_filter: Option<Pubkey>,
+    verbose: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut accounts = db.get_accounts();
     accounts.sort_by(|a, b| {
         let mut result = a.last_update_balance.cmp(&b.last_update_balance);
@@ -2049,17 +2059,15 @@ fn merge_lots(db: &mut Db, account_filter: Option<Pubkey>, verbose: bool) -> Res
             let this_lot = account.lots.get_mut(lot_num).unwrap();
             let this_price = this_lot.acquisition.price();
             let this_lot_number = this_lot.lot_number;
-            if this_lot.acquisition.when == next_lot.acquisition.when
-                && this_price == next_price {
-                    this_lot.amount += next_lot.amount;
-                    account.lots.remove(lot_num + 1);
-                    if verbose {
-                        println!(
-                            "merged lot {} into lot {}",
-                            next_lot_number,
-                            this_lot_number,
-                        );
-                    }
+            if this_lot.acquisition.when == next_lot.acquisition.when && this_price == next_price {
+                this_lot.amount += next_lot.amount;
+                account.lots.remove(lot_num + 1);
+                if verbose {
+                    println!(
+                        "merged lot {} into lot {}",
+                        next_lot_number, this_lot_number,
+                    );
+                }
             } else {
                 lot_num += 1;
             }
@@ -2083,19 +2091,19 @@ fn merge_lots(db: &mut Db, account_filter: Option<Pubkey>, verbose: bool) -> Res
             if this_lot.when == next_lot.when
                 && this_price == next_price
                 && this_lot_acq_when == next_lot_acq_when
-                && this_lot_acq_price == next_lot_acq_price {
-                    this_lot.lot.amount += next_lot.lot.amount;
-                    disposed_lots.remove(lot_num + 1);
-                    if verbose {
-                        println!(
-                            "merged disposed lot {} into disposed lot {}",
-                            next_lot_number,
-                            this_lot_number,
-                        );
-                    }
-                } else {
-                    lot_num += 1;
+                && this_lot_acq_price == next_lot_acq_price
+            {
+                this_lot.lot.amount += next_lot.lot.amount;
+                disposed_lots.remove(lot_num + 1);
+                if verbose {
+                    println!(
+                        "merged disposed lot {} into disposed lot {}",
+                        next_lot_number, this_lot_number,
+                    );
                 }
+            } else {
+                lot_num += 1;
+            }
         }
         db.update_disposed_lots(disposed_lots)?;
     }
@@ -2215,10 +2223,10 @@ async fn process_account_list(
                     for lot in account.lots.iter() {
                         let value = current_token_price.map(|price| {
                             f64::try_from(
-                                Decimal::from_f64(
-                                    account.token.ui_amount(lot.amount)
-                                ).unwrap() * price
-                            ).unwrap()
+                                Decimal::from_f64(account.token.ui_amount(lot.amount)).unwrap()
+                                    * price,
+                            )
+                            .unwrap()
                         });
                         account_basis += lot.basis(account.token);
                         account_value += value.unwrap_or_default();
@@ -2402,7 +2410,7 @@ async fn process_account_list(
                 (((total_current_value - total_current_fiat_value) - total_current_basis)
                     / total_current_basis
                     * 100.)
-                .separated_string_with_fixed_place(2),
+                    .separated_string_with_fixed_place(2),
             );
         }
         if account_filter.is_some() || summary_only {
@@ -2856,7 +2864,7 @@ async fn process_account_csv(
         // Exclude disposed lots that were neither acquired nor disposed of in the filter year
         disposed_lots.retain(|disposed_lot| {
             (disposed_lot.lot.acquisition.when.year() == year
-             && disposed_lot.lot.income(disposed_lot.token) > 0.)
+                && disposed_lot.lot.income(disposed_lot.token) > 0.)
                 || disposed_lot.when.year() == year
         })
     }
@@ -2870,7 +2878,7 @@ async fn process_account_csv(
         "Sale Date",
         "Sale Proceedings (USD)",
         "Acquisition Description",
-        "Sale Description"
+        "Sale Description",
     ])?;
 
     for disposed_lot in disposed_lots {
@@ -2881,20 +2889,30 @@ async fn process_account_csv(
             }
         }
         let cost = Decimal::from_u64(disposed_lot.lot.amount).unwrap()
-            * disposed_lot.lot.acquisition.price() / Decimal::from_f64(1e9).unwrap();
+            * disposed_lot.lot.acquisition.price()
+            / Decimal::from_f64(1e9).unwrap();
         let proceedings = Decimal::from_u64(disposed_lot.lot.amount).unwrap()
-            * disposed_lot.price() / Decimal::from_f64(1e9).unwrap();
+            * disposed_lot.price()
+            / Decimal::from_f64(1e9).unwrap();
         wtr.write_record(&[
             disposed_lot.token.to_string(),
-            format!("{:.9}", disposed_lot.token.ui_amount(disposed_lot.lot.amount)),
+            format!(
+                "{:.9}",
+                disposed_lot.token.ui_amount(disposed_lot.lot.amount)
+            ),
             format!("{:.9}", income),
-            format!("{:.9}", disposed_lot.lot.cap_gain(disposed_lot.token, disposed_lot.price())),
+            format!(
+                "{:.9}",
+                disposed_lot
+                    .lot
+                    .cap_gain(disposed_lot.token, disposed_lot.price())
+            ),
             disposed_lot.lot.acquisition.when.to_string(),
             format!("{:.9}", cost),
             disposed_lot.when.to_string(),
             format!("{:.9}", proceedings),
             disposed_lot.lot.acquisition.kind.to_string(),
-            disposed_lot.kind.to_string()
+            disposed_lot.kind.to_string(),
         ])?;
     }
 
