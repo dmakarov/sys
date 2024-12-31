@@ -1936,7 +1936,7 @@ fn print_current_holdings(
 ) {
     println!("Current Holdings");
     let mut held_tokens = held_tokens
-        .into_iter()
+        .iter()
         .map(
             |(held_token, (current_token_price, total_held_amount, unrealized_gain))| {
                 let total_value = current_token_price.map(|current_token_price| {
@@ -2863,7 +2863,7 @@ async fn process_account_csv(
                 || disposed_lot.when.year() == year
         })
     }
-    wtr.write_record(&[
+    wtr.write_record([
         "Token",
         "Amount",
         "Income (USD)",
