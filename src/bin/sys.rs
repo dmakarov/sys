@@ -2864,25 +2864,16 @@ async fn process_account_csv(
         })
     }
     wtr.write_record([
-        "Token",
+        "Transaction Type",
+        "Asset Name",
         "Amount",
-        "Income (USD)",
-        "Cap Gain (USD)",
-        "Acq. Date",
-        "Acq. Cost (USD)",
-        "Sale Date",
-        "Sale Proceedings (USD)",
-        "Acquisition Description",
-        "Sale Description",
+        "Date Acquired",
+        "Cost basis (USD)",
+        "Date of Disposition",
+        "Proceeds (USD)",
     ])?;
 
     for disposed_lot in disposed_lots {
-        let mut income = disposed_lot.lot.income(disposed_lot.token);
-        if let Some(year) = filter_by_year {
-            if disposed_lot.lot.acquisition.when.year() != year {
-                income = 0. // Exclude income from other years
-            }
-        }
         let cost = Decimal::from_u64(disposed_lot.lot.amount).unwrap()
             * disposed_lot.lot.acquisition.price()
             / Decimal::from_f64(1e9).unwrap();
@@ -2890,24 +2881,16 @@ async fn process_account_csv(
             * disposed_lot.price()
             / Decimal::from_f64(1e9).unwrap();
         wtr.write_record(&[
+            format!("Sell"),
             disposed_lot.token.to_string(),
             format!(
                 "{:.9}",
                 disposed_lot.token.ui_amount(disposed_lot.lot.amount)
             ),
-            format!("{:.9}", income),
-            format!(
-                "{:.9}",
-                disposed_lot
-                    .lot
-                    .cap_gain(disposed_lot.token, disposed_lot.price())
-            ),
             disposed_lot.lot.acquisition.when.to_string(),
             format!("{:.9}", cost),
             disposed_lot.when.to_string(),
             format!("{:.9}", proceedings),
-            disposed_lot.lot.acquisition.kind.to_string(),
-            disposed_lot.kind.to_string(),
         ])?;
     }
 
