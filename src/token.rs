@@ -469,10 +469,11 @@ impl MaybeToken {
     }
 
     pub fn format_ui_amount(&self, ui_amount: f64) -> String {
+        let precision = if self.token() == Some(Token::USDC) { 6 } else { 9 };
         format!(
             "{}{}",
             self.symbol(),
-            ui_amount.separated_string_with_fixed_place(9)
+            ui_amount.separated_string_with_fixed_place(precision)
         )
     }
 }
