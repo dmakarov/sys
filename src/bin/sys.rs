@@ -951,7 +951,7 @@ fn format_disposed_lot(
     };
 
     format!(
-        "{:>5}. {} | {:<7} | {:<17} at ${:<6} | income: ${:<11} | sold {} at ${:6} | {} gain: ${:<14} {}",
+        "{:>5}. {} | {:<7} | {:>17} at ${:>6} | income: ${:>11} | sold {} at ${:6} | {} gain: ${:>14} {}",
         disposed_lot.lot.lot_number,
         disposed_lot.lot.acquisition.when,
         disposed_lot.token.to_string(),
