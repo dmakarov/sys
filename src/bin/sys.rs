@@ -6,7 +6,6 @@ use {
         ArgMatches, SubCommand,
     },
     console::{style, Style},
-    db::*,
     itertools::{izip, Itertools},
     rpc_client_utils::get_signature_date,
     rust_decimal::prelude::*,
@@ -38,6 +37,7 @@ use {
     },
     sys::{
         amount::Amount,
+        db::*,
         exchange::{self, *},
         get_transaction_balance_change::*,
         metrics::{self, dp, MetricsConfig},
