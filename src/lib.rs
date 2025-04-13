@@ -24,6 +24,7 @@ pub mod kraken_exchange;
 pub mod metrics;
 pub mod notifier;
 pub mod priority_fee;
+pub mod process;
 pub mod rpc_client_utils;
 pub mod token;
 pub mod vendor;
