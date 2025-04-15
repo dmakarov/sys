@@ -942,7 +942,7 @@ pub async fn process_account_split<T: Signers, W: Write>(
         into_keypair.pubkey(),
     )?;
 
-    transaction.partial_sign(&signers, recent_blockhash);
+    transaction.try_partial_sign(&signers, recent_blockhash)?;
     transaction.try_sign(&[&into_keypair], recent_blockhash)?;
 
     let signature = transaction.signatures[0];
