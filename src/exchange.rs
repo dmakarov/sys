@@ -191,6 +191,9 @@ pub trait ExchangeClient {
         coin: &str,
         size: f64,
     ) -> Result<(), Box<dyn std::error::Error>>;
+    async fn payment_methods(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error>>;
     fn preferred_solusd_pair(&self) -> &'static str;
 }
 
