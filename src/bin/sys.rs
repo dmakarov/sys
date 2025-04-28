@@ -3983,6 +3983,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         )
                 )
                 .subcommand(
+                    SubCommand::with_name("payment")
+                        .about("Show payment methods")
+                )
+                .subcommand(
                     SubCommand::with_name("market")
                         .about("Display market info for a given trading pair")
                         .arg(
@@ -5166,6 +5170,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let token = MaybeToken::from(value_t!(arg_matches, "token", Token).ok());
                     let deposit_address = exchange_client()?.deposit_address(token).await?;
                     println!("{token} deposit address: {deposit_address}");
+                }
+                ("payment", Some(_arg_matches)) => {
+                    exchange_client()?.payment_methods().await?;
                 }
                 ("pending-deposits", Some(arg_matches)) => {
                     let quiet = arg_matches.is_present("quiet");

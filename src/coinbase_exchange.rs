@@ -147,6 +147,19 @@ impl ExchangeClient for CoinbaseExchangeClient {
         Err("Lending not supported".into())
     }
 
+    async fn payment_methods(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let payment_methods = self.client.list_payment_methods().await;
+        if let Err(e) = payment_methods {
+            return Err(format!("Failed to get payment methods: {e}").into());
+        }
+        for payment_method in payment_methods.unwrap() {
+            println!("payment_method {payment_method:#?}");
+        }
+        Ok(())
+    }
+
     fn preferred_solusd_pair(&self) -> &'static str {
         "SOLUSD"
     }
