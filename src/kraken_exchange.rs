@@ -386,6 +386,12 @@ impl ExchangeClient for KrakenExchangeClient {
         Err("Lending not currently supported for Kraken".into())
     }
 
+    async fn payment_methods(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        Err("Payment methods not supported for Kraken".into())
+    }
+
     fn preferred_solusd_pair(&self) -> &'static str {
         "SOLUSD"
     }

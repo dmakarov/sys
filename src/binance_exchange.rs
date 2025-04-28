@@ -380,6 +380,12 @@ impl ExchangeClient for BinanceExchangeClient {
         Err("Lending not currently supported for Binance".into())
     }
 
+    async fn payment_methods(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        Err("Payment methods not supported for Binance".into())
+    }
+
     fn preferred_solusd_pair(&self) -> &'static str {
         self.preferred_solusd_pair
     }
