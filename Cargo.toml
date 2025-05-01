@@ -19,8 +19,9 @@ bytemuck = "1.5.1"
 chrono = "0.4"
 chrono-humanize = "0.2.1"
 clap = "2.33"
+coinbase-rs = { git = "https://github.com/dmakarov/coinbase-rs.git", branch = "local" }
 #coinbase-rs = { path = "../coinbase-rs" }
-coinbase-rs = { git = "https://github.com/mvines/coinbase-rs.git", rev = "f9647efa5386e24238a0b9baee3012e6d431271f" }
+#coinbase-rs = { git = "https://github.com/mvines/coinbase-rs.git", rev = "f9647efa5386e24238a0b9baee3012e6d431271f" }
 console = "0.14.1"
 fd-lock = "3.0.0"
 fixed = "1.12.0"
