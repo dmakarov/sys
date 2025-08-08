@@ -138,6 +138,7 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
     ui_amount: Option<f64>,
     slippage_bps: u64,
     lot_selection_method: LotSelectionMethod,
+    lot_numbers: Option<HashSet<usize>>,
     signers: T,
     existing_signature: Option<Signature>,
     if_from_balance_exceeds: Option<u64>,
@@ -166,6 +167,7 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
             to_token,
             to_token_price,
             lot_selection_method,
+            lot_numbers,
         )?;
     } else {
         let amount = match ui_amount {
@@ -348,6 +350,7 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
             to_token,
             to_token_price,
             lot_selection_method,
+            lot_numbers,
         )?;
 
         if !send_transaction_until_expired(rpc_clients, &transaction, last_valid_block_height)
