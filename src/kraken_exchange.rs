@@ -386,7 +386,9 @@ impl ExchangeClient for KrakenExchangeClient {
         Err("Lending not currently supported for Kraken".into())
     }
 
-    async fn payment_methods(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn payment_methods(
+        &self,
+    ) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>> {
         Err("Payment methods not supported for Kraken".into())
     }
 

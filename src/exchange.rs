@@ -60,6 +60,14 @@ pub struct ExchangeBalance {
 }
 
 #[derive(Debug)]
+pub struct PaymentInfo {
+    pub id: String,
+    pub r#type: String,
+    pub name: String,
+    pub currency: String,
+}
+
+#[derive(Debug)]
 pub struct DepositInfo {
     pub tx_id: String,
     pub amount: f64, // TODO: rename to `ui_amount`
@@ -191,7 +199,9 @@ pub trait ExchangeClient {
         coin: &str,
         size: f64,
     ) -> Result<(), Box<dyn std::error::Error>>;
-    async fn payment_methods(&self) -> Result<(), Box<dyn std::error::Error>>;
+    async fn payment_methods(
+        &self,
+    ) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>>;
     fn preferred_solusd_pair(&self) -> &'static str;
 }
 

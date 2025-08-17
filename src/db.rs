@@ -1621,7 +1621,7 @@ impl Db {
         self.save()
     }
 
-    fn get_exchanges(&self) -> HashSet<Exchange> {
+    pub fn get_exchanges(&self) -> HashSet<Exchange> {
         self.data.exchanges.clone()
     }
 
