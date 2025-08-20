@@ -931,7 +931,7 @@ dependencies = [
 [[package]]
 name = "coinbase-rs"
 version = "0.3.0"
-source = "git+https://github.com/dmakarov/coinbase-rs.git?branch=local#4bbf6e345e4159a5e0083448301589ce37777989"
+source = "git+https://github.com/dmakarov/coinbase-rs.git?branch=local#d0f607e091966a792a7894ba6d7710a0142d3447"
 dependencies = [
  "async-stream",
  "base64 0.10.1",

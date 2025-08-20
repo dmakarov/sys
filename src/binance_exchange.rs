@@ -19,6 +19,12 @@ pub struct BinanceExchangeClient {
 
 #[async_trait]
 impl ExchangeClient for BinanceExchangeClient {
+    async fn accounts(
+        &self,
+    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
+        Err("Accounts not currently supported for Binance".into())
+    }
+
     async fn deposit_address(
         &self,
         token: MaybeToken,

@@ -13,48 +13,66 @@ pub struct CoinbaseExchangeClient {
 
 #[async_trait]
 impl ExchangeClient for CoinbaseExchangeClient {
+    async fn accounts(
+        &self,
+    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
+        let accounts = self.client.accounts().await;
+        if let Err(e) = accounts {
+            return Err(format!("Failed to get accounts: {e}").into());
+        }
+        Ok(
+            accounts
+                .unwrap()
+                .iter()
+                .filter(|x| x.active)
+                .map(|x| AccountInfo {
+                    uuid: x.uuid.clone(),
+                    name: x.name.clone(),
+                    currency: x.currency.clone(),
+                    value: x.available_balance.value.clone(),
+                })
+                .collect()
+        )
+    }
+
     async fn deposit_address(
         &self,
         token: MaybeToken,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
-        let accounts = self.client.accounts();
-        pin_mut!(accounts);
+        let accounts = self.client.accounts().await;
+        if let Err(e) = accounts {
+            return Err(format!("Failed to get accounts: {e}").into());
+        }
 
-        while let Some(account_result) = accounts.next().await {
-            if let Err(e) = account_result {
-                return Err(format!("Failed to get accounts: {e}").into());
-            }
-            for account in account_result.unwrap() {
-                if let Ok(id) = coinbase_rs::Uuid::from_str(&account.id) {
-                    if token.name() == account.currency.code
-                        && account.primary
-                        && account.allow_deposits
-                    {
-                        let addresses = self.client.list_addresses(&id);
-                        pin_mut!(addresses);
+        for account in accounts.unwrap() {
+            if let Ok(id) = coinbase_rs::Uuid::from_str(&account.uuid) {
+                if token.name() == account.currency && account.active
+                {
+                    let addresses = self.client.list_addresses(&id);
+                    pin_mut!(addresses);
 
-                        let mut best_pubkey_updated_at = None;
-                        let mut best_pubkey = None;
-                        while let Some(addresses_result) = addresses.next().await {
-                            for address in addresses_result.unwrap() {
-                                if address.network.as_str() == "solana" {
-                                    if let Ok(pubkey) = address.address.parse::<Pubkey>() {
-                                        if address.updated_at > best_pubkey_updated_at {
-                                            best_pubkey_updated_at = address.updated_at;
-                                            best_pubkey = Some(pubkey);
-                                        }
+                    let mut best_pubkey_updated_at = None;
+                    let mut best_pubkey = None;
+                    while let Some(addresses_result) = addresses.next().await {
+                        for address in addresses_result.unwrap() {
+                            if address.network.as_str() == "solana" {
+                                if let Ok(pubkey) = address.address.parse::<Pubkey>() {
+                                    if address.updated_at > best_pubkey_updated_at {
+                                        best_pubkey_updated_at = address.updated_at;
+                                        best_pubkey = Some(pubkey);
                                     }
                                 }
                             }
                         }
-                        if let Some(pubkey) = best_pubkey {
-                            return Ok(pubkey);
-                        }
-                        break;
                     }
+                    if let Some(pubkey) = best_pubkey {
+                        return Ok(pubkey);
+                    }
+                    break;
                 }
             }
         }
+
         Err(format!("Unsupported deposit token: {}", token.name()).into())
     }
 
@@ -96,24 +114,18 @@ impl ExchangeClient for CoinbaseExchangeClient {
         }
         let payment_method = coinbase_rs::Uuid::from_str(&payment_method_id);
 
-
-        let accounts = self.client.accounts();
-        pin_mut!(accounts);
-
-        while let Some(account_result) = accounts.next().await {
-            if let Err(e) = account_result {
-                return Err(format!("Failed to get accounts: {e}").into());
-            }
-            for account in account_result.unwrap() {
-                if let Ok(id) = coinbase_rs::Uuid::from_str(&account.id) {
-                    if token.name() == account.currency.code
-                        && account.primary
-                        && account.allow_deposits
-                    {
-                    }
+        let accounts = self.client.accounts().await;
+        if let Err(e) = accounts {
+            return Err(format!("Failed to get accounts: {e}").into());
+        }
+        for account in accounts.unwrap() {
+            if let Ok(id) = coinbase_rs::Uuid::from_str(&account.uuid) {
+                if token.name() == account.currency && account.active
+                {
                 }
             }
         }
+
         Err("Withdrawals not supported".into())
     }
 

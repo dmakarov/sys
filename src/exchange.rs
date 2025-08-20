@@ -59,7 +59,15 @@ pub struct ExchangeBalance {
     pub total: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct AccountInfo {
+    pub uuid: String,
+    pub name: String,
+    pub currency: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct PaymentInfo {
     pub id: String,
     pub r#type: String,
@@ -143,6 +151,9 @@ pub enum LendingHistory {
 
 #[async_trait]
 pub trait ExchangeClient {
+    async fn accounts(
+        &self,
+    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>>;
     async fn deposit_address(
         &self,
         token: MaybeToken,

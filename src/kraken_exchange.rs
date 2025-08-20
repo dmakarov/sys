@@ -30,6 +30,12 @@ fn deposit_methods() -> HashMap</*coin: */ &'static str, /* method: */ &'static 
 
 #[async_trait]
 impl ExchangeClient for KrakenExchangeClient {
+    async fn accounts(
+        &self,
+    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
+        Err("Accounts not currently supported for Kraken".into())
+    }
+
     async fn deposit_address(
         &self,
         token: MaybeToken,
