@@ -149,6 +149,9 @@ pub enum LendingHistory {
     },
 }
 
+pub struct DisbursementInfo {
+}
+
 #[async_trait]
 pub trait ExchangeClient {
     async fn accounts(
@@ -213,6 +216,13 @@ pub trait ExchangeClient {
     async fn payment_methods(
         &self,
     ) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>>;
+    async fn disburse_cash(
+        &self,
+        account: String,
+        amount: String,
+        currency: String,
+        method: String,
+    ) -> Result<DisbursementInfo, Box<dyn std::error::Error>>;
     fn preferred_solusd_pair(&self) -> &'static str;
 }
 

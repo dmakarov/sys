@@ -96,36 +96,12 @@ impl ExchangeClient for CoinbaseExchangeClient {
     async fn request_withdraw(
         &self,
         _address: Pubkey,
-        token: MaybeToken,
-        amount: f64,
+        _token: MaybeToken,
+        _amount: f64,
         _password: Option<String>,
         _code: Option<String>,
     ) -> Result<(/* withdraw_id: */ String, /*withdraw_fee: */ f64), Box<dyn std::error::Error>>
     {
-        let mut payment_method_id = String::new();
-        let payment_methods = self.client.list_payment_methods().await;
-        if let Err(e) = payment_methods {
-            return Err(format!("Failed to get payment methods: {e}").into());
-        }
-        for payment_method in payment_methods.unwrap() {
-            if payment_method.currency == "USD" && payment_method.r#type == "ACH" {
-                payment_method_id = payment_method.id;
-            }
-        }
-        let payment_method = coinbase_rs::Uuid::from_str(&payment_method_id);
-
-        let accounts = self.client.accounts().await;
-        if let Err(e) = accounts {
-            return Err(format!("Failed to get accounts: {e}").into());
-        }
-        for account in accounts.unwrap() {
-            if let Ok(id) = coinbase_rs::Uuid::from_str(&account.uuid) {
-                if token.name() == account.currency && account.active
-                {
-                }
-            }
-        }
-
         Err("Withdrawals not supported".into())
     }
 
@@ -215,6 +191,28 @@ impl ExchangeClient for CoinbaseExchangeClient {
                     currency: x.currency.clone(),
                 })
                 .collect()
+        )
+    }
+
+    async fn disburse_cash(
+        &self,
+        account: String,
+        amount: String,
+        currency: String,
+        method: String,
+    ) -> Result<DisbursementInfo, Box<dyn std::error::Error>> {
+        let transfer = self.client.withdrawals(
+            account,
+            amount,
+            currency,
+            method,
+        ).await;
+        if let Err(e) = transfer {
+            return Err(format!("Failed to get disburse cash: {e}").into());
+        }
+        Ok(
+            DisbursementInfo {
+            }
         )
     }
 
