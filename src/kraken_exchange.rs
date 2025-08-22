@@ -30,9 +30,7 @@ fn deposit_methods() -> HashMap</*coin: */ &'static str, /* method: */ &'static 
 
 #[async_trait]
 impl ExchangeClient for KrakenExchangeClient {
-    async fn accounts(
-        &self,
-    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
+    async fn accounts(&self) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
         Err("Accounts not currently supported for Kraken".into())
     }
 
@@ -392,9 +390,7 @@ impl ExchangeClient for KrakenExchangeClient {
         Err("Lending not currently supported for Kraken".into())
     }
 
-    async fn payment_methods(
-        &self,
-    ) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>> {
+    async fn payment_methods(&self) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>> {
         Err("Payment methods not supported for Kraken".into())
     }
 

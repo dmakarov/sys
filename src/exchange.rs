@@ -149,14 +149,11 @@ pub enum LendingHistory {
     },
 }
 
-pub struct DisbursementInfo {
-}
+pub struct DisbursementInfo {}
 
 #[async_trait]
 pub trait ExchangeClient {
-    async fn accounts(
-        &self,
-    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>>;
+    async fn accounts(&self) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>>;
     async fn deposit_address(
         &self,
         token: MaybeToken,
@@ -213,9 +210,7 @@ pub trait ExchangeClient {
         coin: &str,
         size: f64,
     ) -> Result<(), Box<dyn std::error::Error>>;
-    async fn payment_methods(
-        &self,
-    ) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>>;
+    async fn payment_methods(&self) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>>;
     async fn disburse_cash(
         &self,
         account: String,

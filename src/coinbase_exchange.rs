@@ -13,26 +13,22 @@ pub struct CoinbaseExchangeClient {
 
 #[async_trait]
 impl ExchangeClient for CoinbaseExchangeClient {
-    async fn accounts(
-        &self,
-    ) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
+    async fn accounts(&self) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>> {
         let accounts = self.client.accounts().await;
         if let Err(e) = accounts {
             return Err(format!("Failed to get accounts: {e}").into());
         }
-        Ok(
-            accounts
-                .unwrap()
-                .iter()
-                .filter(|x| x.active)
-                .map(|x| AccountInfo {
-                    uuid: x.uuid.clone(),
-                    name: x.name.clone(),
-                    currency: x.currency.clone(),
-                    value: x.available_balance.value.clone(),
-                })
-                .collect()
-        )
+        Ok(accounts
+            .unwrap()
+            .iter()
+            .filter(|x| x.active)
+            .map(|x| AccountInfo {
+                uuid: x.uuid.clone(),
+                name: x.name.clone(),
+                currency: x.currency.clone(),
+                value: x.available_balance.value.clone(),
+            })
+            .collect())
     }
 
     async fn deposit_address(
@@ -46,20 +42,21 @@ impl ExchangeClient for CoinbaseExchangeClient {
 
         for account in accounts.unwrap() {
             if let Ok(id) = coinbase_rs::Uuid::from_str(&account.uuid) {
-                if token.name() == account.currency && account.active
-                {
+                if token.name() == account.currency && account.active {
                     let addresses = self.client.list_addresses(&id);
                     pin_mut!(addresses);
 
                     let mut best_pubkey_updated_at = None;
                     let mut best_pubkey = None;
                     while let Some(addresses_result) = addresses.next().await {
-                        for address in addresses_result.unwrap() {
-                            if address.network.as_str() == "solana" {
-                                if let Ok(pubkey) = address.address.parse::<Pubkey>() {
-                                    if address.updated_at > best_pubkey_updated_at {
-                                        best_pubkey_updated_at = address.updated_at;
-                                        best_pubkey = Some(pubkey);
+                        if let Ok(addresses) = addresses_result {
+                            for address in addresses {
+                                if address.network.as_str() == "solana" {
+                                    if let Ok(pubkey) = address.address.parse::<Pubkey>() {
+                                        if address.updated_at > best_pubkey_updated_at {
+                                            best_pubkey_updated_at = address.updated_at;
+                                            best_pubkey = Some(pubkey);
+                                        }
                                     }
                                 }
                             }
@@ -172,48 +169,102 @@ impl ExchangeClient for CoinbaseExchangeClient {
         Err("Lending not supported".into())
     }
 
-    async fn payment_methods(
-        &self,
-    ) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>> {
+    async fn payment_methods(&self) -> Result<Vec<PaymentInfo>, Box<dyn std::error::Error>> {
         let payment_methods = self.client.list_payment_methods().await;
         if let Err(e) = payment_methods {
             return Err(format!("Failed to get payment methods: {e}").into());
         }
-        Ok(
-            payment_methods
-                .unwrap()
-                .iter()
-                .filter(|x| x.allow_withdraw)
-                .map(|x| PaymentInfo {
-                    id: x.id.clone(),
-                    r#type: x.r#type.clone(),
-                    name: x.name.clone(),
-                    currency: x.currency.clone(),
-                })
-                .collect()
-        )
+        Ok(payment_methods
+            .unwrap()
+            .iter()
+            .filter(|x| x.allow_withdraw)
+            .map(|x| PaymentInfo {
+                id: x.id.clone(),
+                r#type: x.r#type.clone(),
+                name: x.name.clone(),
+                currency: x.currency.clone(),
+            })
+            .collect())
     }
 
     async fn disburse_cash(
         &self,
-        account: String,
+        account_uuid: String,
         amount: String,
         currency: String,
         method: String,
     ) -> Result<DisbursementInfo, Box<dyn std::error::Error>> {
-        let transfer = self.client.withdrawals(
-            account,
-            amount,
-            currency,
-            method,
-        ).await;
-        if let Err(e) = transfer {
-            return Err(format!("Failed to get disburse cash: {e}").into());
+        let accounts = self.client.accounts().await;
+        if let Err(e) = accounts {
+            return Err(format!("Failed to get accounts: {e}").into());
         }
-        Ok(
-            DisbursementInfo {
+
+        let from_account = accounts
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|x| x.uuid == account_uuid)
+            .unwrap();
+
+        let account_uuid = if from_account.currency != currency {
+            println!("FROM account currency doesn't match the currency of payment method");
+            // need to convert to USD first.
+            let to_account = accounts
+                .as_ref()
+                .unwrap()
+                .iter()
+                .find(|x| x.currency == currency)
+                .unwrap();
+            println!("convert from {} to {}", from_account.name, to_account.name);
+            let quote = self
+                .client
+                .create_convert_quote(
+                    from_account.currency.clone(),
+                    to_account.currency.clone(),
+                    amount.clone(),
+                )
+                .await;
+            if let Err(e) = quote {
+                return Err(format!("Failed to create convert quote {e}").into());
             }
-        )
+            let trade = self
+                .client
+                .commit_convert_trade(
+                    from_account.currency.clone(),
+                    to_account.currency.clone(),
+                    quote.as_ref().unwrap().id.clone(),
+                )
+                .await;
+            if let Err(e) = trade {
+                return Err(format!("Failed to commit convert trade {e}").into());
+            }
+            to_account.uuid.clone()
+        } else {
+            account_uuid
+        };
+
+        let transfer = self
+            .client
+            .withdrawals(account_uuid, amount, currency, method)
+            .await;
+        if let Err(e) = transfer {
+            return Err(format!("Failed to disburse cash: {e}").into());
+        }
+        if transfer.as_ref().unwrap().cancellation_reason.is_some() {
+            return Err(format!(
+                "Cash disbursement cancelled: {}",
+                transfer
+                    .as_ref()
+                    .unwrap()
+                    .cancellation_reason
+                    .as_ref()
+                    .unwrap()
+                    .message
+                    .clone(),
+            )
+            .into());
+        }
+        Ok(DisbursementInfo {})
     }
 
     fn preferred_solusd_pair(&self) -> &'static str {
