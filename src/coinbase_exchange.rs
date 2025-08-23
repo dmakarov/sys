@@ -250,12 +250,11 @@ impl ExchangeClient for CoinbaseExchangeClient {
         if let Err(e) = transfer {
             return Err(format!("Failed to disburse cash: {e}").into());
         }
-        if transfer.as_ref().unwrap().cancellation_reason.is_some() {
+        let transfer = transfer.as_ref().unwrap();
+        if transfer.cancellation_reason.is_some() {
             return Err(format!(
                 "Cash disbursement cancelled: {}",
                 transfer
-                    .as_ref()
-                    .unwrap()
                     .cancellation_reason
                     .as_ref()
                     .unwrap()
@@ -264,7 +263,13 @@ impl ExchangeClient for CoinbaseExchangeClient {
             )
             .into());
         }
-        Ok(DisbursementInfo {})
+        Ok(DisbursementInfo {
+            id: transfer.id.clone(),
+            total: transfer.total.as_ref().unwrap().value.clone(),
+            total_fee: transfer.total_fee.as_ref().unwrap().amount.value.clone(),
+            user_reference: transfer.user_reference.clone(),
+            user_warnings: transfer.user_warnings.clone(),
+        })
     }
 
     fn preferred_solusd_pair(&self) -> &'static str {

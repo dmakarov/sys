@@ -149,7 +149,13 @@ pub enum LendingHistory {
     },
 }
 
-pub struct DisbursementInfo {}
+pub struct DisbursementInfo {
+    pub id: String,
+    pub total: String,
+    pub total_fee: String,
+    pub user_reference: String,
+    pub user_warnings: Vec<String>,
+}
 
 #[async_trait]
 pub trait ExchangeClient {
