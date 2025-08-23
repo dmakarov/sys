@@ -76,8 +76,16 @@ pub async fn get_current_price(token: &MaybeToken) -> Result<Decimal, Box<dyn st
     type CurrentPriceCache = HashMap<MaybeToken, Decimal>;
     lazy_static::lazy_static! {
         static ref CURRENT_PRICE_CACHE: Arc<RwLock<CurrentPriceCache>> = Arc::new(RwLock::new(HashMap::new()));
+        static ref LAST_DATA_FETCH_INSTANT: Arc<RwLock<std::time::Instant>> = Arc::new(RwLock::new(std::time::Instant::now()));
     }
     let mut current_price_cache = CURRENT_PRICE_CACHE.write().await;
+    let mut last_data_fetch_instant = LAST_DATA_FETCH_INSTANT.write().await;
+
+    let now = std::time::Instant::now();
+    if now.duration_since(*last_data_fetch_instant).as_secs() > 30 {
+        current_price_cache.remove(token);
+        *last_data_fetch_instant = now;
+    }
 
     match current_price_cache.get(token) {
         Some(price) => Ok(*price),
