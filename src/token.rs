@@ -57,6 +57,27 @@ pub enum Token {
 }
 
 impl Token {
+    pub const VARIANTS: [Token; 18] = [
+        Token::USDC,
+        Token::USDS,
+        Token::USDT,
+        Token::UXD,
+        Token::bSOL,
+        Token::hSOL,
+        Token::mSOL,
+        Token::stSOL,
+        Token::JitoSOL,
+        Token::JLP,
+        Token::JUP,
+        Token::JTO,
+        Token::BONK,
+        Token::KMNO,
+        Token::PYTH,
+        Token::WEN,
+        Token::WIF,
+        Token::PYUSD,
+    ];
+
     pub fn mint(&self) -> Pubkey {
         match self {
             Token::USDC => pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),

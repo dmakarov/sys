@@ -90,11 +90,12 @@ pub async fn get_current_price(token: &MaybeToken) -> Result<Decimal, Box<dyn st
     match current_price_cache.get(token) {
         Some(price) => Ok(*price),
         None => {
-            let coin = token_to_coin(token)?;
-
+            let coins = Token::VARIANTS.iter().fold("solana".to_string(), |acc, x| {
+                format!("{acc},{}", token_to_coin(&MaybeToken::from(*x)).unwrap())
+            });
             let (maybe_pro, x_cg_pro_api_key) = get_cg_pro_api_key();
             let url = format!(
-                "https://{maybe_pro}api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd{x_cg_pro_api_key}"
+                "https://{maybe_pro}api.coingecko.com/api/v3/simple/price?ids={coins}&vs_currencies=usd{x_cg_pro_api_key}"
             );
 
             #[derive(Debug, Serialize, Deserialize)]
@@ -111,6 +112,8 @@ pub async fn get_current_price(token: &MaybeToken) -> Result<Decimal, Box<dyn st
                 jitosol: Option<CurrencyList>,
                 #[serde(rename = "tether")]
                 tether: Option<CurrencyList>,
+                #[serde(rename = "usd-coin")]
+                usdc: Option<CurrencyList>,
                 #[serde(rename = "usds")]
                 usds: Option<CurrencyList>,
                 #[serde(rename = "uxd-stablecoin")]
@@ -134,34 +137,88 @@ pub async fn get_current_price(token: &MaybeToken) -> Result<Decimal, Box<dyn st
                 #[serde(rename = "paypal-usd")]
                 pyusd: Option<CurrencyList>,
             }
-
             let coins = reqwest::get(url).await?.json::<Coins>().await?;
+            coins.solana.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(None), price);
+            });
+            coins.msol.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::mSOL)), price);
+            });
+            coins.stsol.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::stSOL)), price);
+            });
+            coins.jitosol.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::JitoSOL)), price);
+            });
+            coins.tether.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::USDT)), price);
+            });
+            coins.usdc.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::USDC)), price);
+            });
+            coins.usds.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::USDS)), price);
+            });
+            coins.uxd.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::UXD)), price);
+            });
+            coins.bsol.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::bSOL)), price);
+            });
+            coins.hsol.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::hSOL)), price);
+            });
+            coins.jlp.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::JLP)), price);
+            });
+            coins.jup.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::JUP)), price);
+            });
+            coins.jto.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::JTO)), price);
+            });
+            coins.bonk.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::BONK)), price);
+            });
+            coins.kmno.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::KMNO)), price);
+            });
+            coins.pyth.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::PYTH)), price);
+            });
+            coins.wen.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::WEN)), price);
+            });
+            coins.wif.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::WIF)), price);
+            });
+            coins.pyusd.map(|price| {
+                let price = Decimal::from_f64(price.usd).unwrap();
+                current_price_cache.insert(MaybeToken::from(Some(Token::PYUSD)), price);
+            });
 
-            coins
-                .solana
-                .or(coins.msol)
-                .or(coins.stsol)
-                .or(coins.jitosol)
-                .or(coins.tether)
-                .or(coins.usds)
-                .or(coins.uxd)
-                .or(coins.bsol)
-                .or(coins.hsol)
-                .or(coins.jlp)
-                .or(coins.jup)
-                .or(coins.jto)
-                .or(coins.bonk)
-                .or(coins.kmno)
-                .or(coins.pyth)
-                .or(coins.wen)
-                .or(coins.wif)
-                .or(coins.pyusd)
-                .ok_or_else(|| format!("Simple price data not available for {coin}").into())
-                .map(|price| {
-                    let price = Decimal::from_f64(price.usd).unwrap();
-                    current_price_cache.insert(*token, price);
-                    price
-                })
+            current_price_cache
+                .get(token)
+                .ok_or_else(|| format!("Simple price data not available for {token}").into())
+                .copied()
         }
     }
 }
