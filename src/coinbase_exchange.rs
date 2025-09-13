@@ -238,7 +238,35 @@ impl ExchangeClient for CoinbaseExchangeClient {
             if let Err(e) = trade {
                 return Err(format!("Failed to commit convert trade {e}").into());
             }
-            to_account.uuid.clone()
+
+            std::thread::sleep(std::time::Duration::from_secs(10));
+
+            let accounts = self.client.accounts().await;
+            if let Err(e) = accounts {
+                return Err(format!("Failed to get distribution account: {e}").into());
+            }
+            let account_uuid = to_account.uuid.clone();
+            let distribution_account = accounts
+                .as_ref()
+                .unwrap()
+                .iter()
+                .find(|x| x.uuid == account_uuid)
+                .unwrap();
+            if distribution_account
+                .available_balance
+                .value
+                .parse::<f64>()
+                .unwrap()
+                < amount.parse::<f64>().unwrap()
+            {
+                return Err(format!(
+                    "Cash for disbursement is not available, balance is {}. Try sync later, and disburse from {} account.",
+                    distribution_account.available_balance.value,
+                    currency,
+                )
+                .into());
+            }
+            account_uuid
         } else {
             account_uuid
         };
