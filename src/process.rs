@@ -81,6 +81,12 @@ async fn retry_get_historical_price(
     token.get_historical_price(rpc_client, block_date).await
 }
 
+fn get_jup_api_key() -> Result<String, String> {
+    let keyring_entry = keyring::Entry::new("jup", "jup_api_key").map_err(|e| format!("{e}"))?;
+    let api_key = keyring_entry.get_secret().map_err(|e| format!("{e}"))?;
+    Ok(String::from_utf8(api_key).map_err(|e| format!("{e}"))?)
+}
+
 fn println_jup_quote<W: Write>(
     from_token: MaybeToken,
     to_token: MaybeToken,
@@ -113,6 +119,7 @@ pub async fn process_jup_quote<W: Write>(
     slippage_bps: u64,
     writer: &mut W,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let jup_api_key = get_jup_api_key()?;
     let quote = jup_ag::quote(
         from_token.mint(),
         to_token.mint(),
@@ -121,6 +128,7 @@ pub async fn process_jup_quote<W: Write>(
             slippage_bps: Some(slippage_bps),
             ..jup_ag::QuoteConfig::default()
         },
+        jup_api_key,
     )
     .await?;
 
@@ -213,6 +221,7 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
             )
         })?;
 
+        let jup_api_key = get_jup_api_key()?;
         writeln!(writer, "Fetching best {from_token}->{to_token} quote...")?;
         let quote = jup_ag::quote(
             from_token.mint(),
@@ -222,6 +231,7 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
                 slippage_bps: Some(slippage_bps),
                 ..jup_ag::QuoteConfig::default()
             },
+            jup_api_key.clone(),
         )
         .await?;
 
@@ -269,7 +279,7 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
                 jup_ag::PrioritizationFeeLamports::Exact { lamports };
         }
 
-        let mut transaction = jup_ag::swap(swap_request).await?.swap_transaction;
+        let mut transaction = jup_ag::swap(swap_request, jup_api_key).await?.swap_transaction;
 
         {
             let mut transaction_compute_budget = priority_fee::ComputeBudget::default();

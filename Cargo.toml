@@ -19,7 +19,7 @@ bytemuck = "1.5.1"
 chrono = "0.4"
 chrono-humanize = "0.2.1"
 clap = "2.33"
-coinbase-rs = { git = "https://github.com/dmakarov/coinbase-rs.git", branch = "local" }
+coinbase-rs = { git = "https://github.com/dmakarov/coinbase-rs", branch = "local" }
 #coinbase-rs = { path = "../coinbase-rs" }
 #coinbase-rs = { git = "https://github.com/mvines/coinbase-rs.git", rev = "f9647efa5386e24238a0b9baee3012e6d431271f" }
 console = "0.14.1"
@@ -32,8 +32,9 @@ ftx = { git = "https://github.com/fabianboesiger/ftx", rev = "bb98235d356dd1a2be
 futures = "0.3.25"
 influxdb-client = "0.1.4"
 itertools = "0.10.0"
-jup-ag = "0.9.1"
-#jup-ag = { path = "../jup_ag" }
+#jup-ag = "0.9.1"
+#jup-ag = { path = "../rust-jup-ag" }
+jup-ag = { git = "https://github.com/dmakarov/rust-jup-ag" }
 #kraken_sdk_rest = { path = "../kraken_sdk_rust/kraken_sdk_rest" }
 kraken_sdk_rest = { git = "https://github.com/mvines/kraken_sdk_rust", rev = "80c634b3a8527f653db989689b298496dad30d4e" }
 #kraken_sdk_rest = "0.18.0"
