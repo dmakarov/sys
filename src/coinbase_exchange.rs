@@ -176,13 +176,13 @@ impl ExchangeClient for CoinbaseExchangeClient {
         }
         Ok(payment_methods
             .unwrap()
-            .iter()
+            .into_iter()
             .filter(|x| x.allow_withdraw)
             .map(|x| PaymentInfo {
-                id: x.id.clone(),
-                r#type: x.r#type.clone(),
-                name: x.name.clone(),
-                currency: x.currency.clone(),
+                id: x.id,
+                r#type: x.r#type,
+                name: x.name,
+                currency: x.currency,
             })
             .collect())
     }
@@ -298,6 +298,42 @@ impl ExchangeClient for CoinbaseExchangeClient {
             user_reference: transfer.user_reference.clone(),
             user_warnings: transfer.user_warnings.clone(),
         })
+    }
+
+    async fn get_product_candles(
+        &self,
+        product_id: String,
+        start: i64,
+        end: i64,
+    ) -> Result<Vec<Candle>, Box<dyn std::error::Error>> {
+        let candles = self
+            .client
+            .get_product_candles(product_id, format!("{start}"), format!("{end}"))
+            .await;
+        if let Err(e) = candles {
+            return Err(format!("Failed to get product candles: {e}").into());
+        }
+        Ok(candles
+            .unwrap()
+            .into_iter()
+            .map(|c| Candle {
+                low: c.low,
+                high: c.high,
+                open: c.open,
+                close: c.close,
+            })
+            .collect())
+    }
+
+    async fn get_spot_price(
+        &self,
+        pair: String,
+        date: Option<String>,
+    ) -> Result<f64, Box<dyn std::error::Error>> {
+        self.client
+            .get_spot_price(pair, date)
+            .await
+            .map_err(|err| format!("Failed to get spot price: {err}").into())
     }
 
     fn preferred_solusd_pair(&self) -> &'static str {

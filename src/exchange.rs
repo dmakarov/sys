@@ -157,6 +157,14 @@ pub struct DisbursementInfo {
     pub user_warnings: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Candle {
+    pub low: String,
+    pub high: String,
+    pub open: String,
+    pub close: String,
+}
+
 #[async_trait]
 pub trait ExchangeClient {
     async fn accounts(&self) -> Result<Vec<AccountInfo>, Box<dyn std::error::Error>>;
@@ -224,6 +232,17 @@ pub trait ExchangeClient {
         currency: String,
         method: String,
     ) -> Result<DisbursementInfo, Box<dyn std::error::Error>>;
+    async fn get_product_candles(
+        &self,
+        product_id: String,
+        start: i64,
+        end: i64,
+    ) -> Result<Vec<Candle>, Box<dyn std::error::Error>>;
+    async fn get_spot_price(
+        &self,
+        pair: String,
+        date: Option<String>,
+    ) -> Result<f64, Box<dyn std::error::Error>>;
     fn preferred_solusd_pair(&self) -> &'static str;
 }
 

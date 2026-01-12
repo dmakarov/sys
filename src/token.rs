@@ -196,6 +196,34 @@ impl Token {
         }
     }
 
+    pub fn usd_pair(&self) -> &'static str {
+        match self {
+            Token::USDC => "USDC-USD",
+            Token::USDS => "USDS-USD",
+            Token::USDT => "USDT-USD",
+            Token::UXD => "UXD-USD",
+            Token::tuUSDC => "TUUSDC-USD",
+            Token::bSOL => "BSOL-USD",
+            Token::hSOL => "HSOL-USD",
+            Token::mSOL => "MSOL-USD",
+            Token::stSOL => "STSOL-USD",
+            Token::JitoSOL => "JITOSOL-USD",
+            Token::tuSOL => "TUSOL-USD",
+            Token::tumSOL => "TUMSOL-USD",
+            Token::tustSOL => "TUSTSOL-USD",
+            Token::wSOL => "WSOL-USD",
+            Token::JLP => "JLP-USD",
+            Token::JUP => "JUP-USD",
+            Token::JTO => "JTO-USD",
+            Token::BONK => "BONK-USD",
+            Token::KMNO => "KMNO-USD",
+            Token::PYTH => "PYTH-USD",
+            Token::WEN => "WEN-USD",
+            Token::WIF => "WIF-USD",
+            Token::PYUSD => "PYUSD-USD",
+        }
+    }
+
     pub fn ui_amount(&self, amount: u64) -> f64 {
         spl_token::amount_to_ui_amount(amount, self.decimals())
     }
@@ -461,6 +489,29 @@ impl MaybeToken {
                 .map(|account| account.lamports)
                 .unwrap_or_default()),
             Some(token) => token.balance(rpc_client, address),
+        }
+    }
+
+    pub async fn get_spot_price(
+        &self,
+        exchange_client: &dyn crate::exchange::ExchangeClient,
+        when: Option<NaiveDate>,
+    ) -> Result<Decimal, Box<dyn std::error::Error>> {
+        match self.0 {
+            None => exchange_client
+                .get_spot_price(
+                    "SOL-USD".to_string(),
+                    when.map(|v| v.format("%Y-%m-%d").to_string()),
+                )
+                .await
+                .map(|v| Decimal::from_f64(v).unwrap()),
+            Some(token) => exchange_client
+                .get_spot_price(
+                    token.usd_pair().to_string(),
+                    when.map(|v| v.format("%Y-%m-%d").to_string()),
+                )
+                .await
+                .map(|v| Decimal::from_f64(v).unwrap()),
         }
     }
 

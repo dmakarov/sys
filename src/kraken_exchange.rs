@@ -404,6 +404,23 @@ impl ExchangeClient for KrakenExchangeClient {
         Err("Cash disbursement not supported for Kraken".into())
     }
 
+    async fn get_product_candles(
+        &self,
+        _product_id: String,
+        _start: i64,
+        _end: i64,
+    ) -> Result<Vec<Candle>, Box<dyn std::error::Error>> {
+        Err("Product candles not supported for Kraken".into())
+    }
+
+    async fn get_spot_price(
+        &self,
+        _pair: String,
+        _date: Option<String>,
+    ) -> Result<f64, Box<dyn std::error::Error>> {
+        Err("Spot price not supported for Kraken".into())
+    }
+
     fn preferred_solusd_pair(&self) -> &'static str {
         "SOLUSD"
     }

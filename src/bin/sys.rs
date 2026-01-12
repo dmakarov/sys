@@ -974,6 +974,7 @@ fn format_disposed_lot(
 async fn process_account_add(
     db: &mut Db,
     rpc_client: &RpcClient,
+    exchange_client: &dyn ExchangeClient,
     address: Pubkey,
     token: MaybeToken,
     description: String,
@@ -1055,7 +1056,7 @@ async fn process_account_add(
 
     println!("Adding {address} (token: {token})");
 
-    let current_price = token.get_current_price(rpc_client).await?;
+    let current_price = token.get_spot_price(exchange_client, None).await?;
     let decimal_price = match price {
         Some(price) => Decimal::from_f64(price).unwrap(),
         None => match when {
@@ -1432,6 +1433,7 @@ fn merge_lots(
 async fn process_account_list(
     db: &Db,
     rpc_client: &RpcClient,
+    exchange_client: &dyn ExchangeClient,
     account_filter: Option<Pubkey>,
     show_all_lots: bool,
     summary_only: bool,
@@ -1487,7 +1489,11 @@ async fn process_account_list(
             if let std::collections::btree_map::Entry::Vacant(e) = held_tokens.entry(account.token)
             {
                 e.insert((
-                    account.token.get_current_price(rpc_client).await.ok(),
+                    account
+                        .token
+                        .get_spot_price(exchange_client, None)
+                        .await
+                        .ok(),
                     0,
                     RealizedGain::default(),
                 ));
@@ -4086,6 +4092,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .about("Show payment methods")
                 )
                 .subcommand(
+                    SubCommand::with_name("candles")
+                        .about("Show product candles")
+                )
+                .subcommand(
                     SubCommand::with_name("market")
                         .about("Display market info for a given trading pair")
                         .arg(
@@ -4582,9 +4592,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .await?
             }
+            let exchange = Exchange::Coinbase;
+            let exchange_credentials = db.get_exchange_credentials(exchange, "").unwrap();
+            let exchange_client = exchange_client_new(exchange, exchange_credentials)?;
             process_account_sync(
                 &mut db,
                 &rpc_clients,
+                exchange_client.as_ref(),
                 None,
                 max_epochs_to_process,
                 false,
@@ -4754,10 +4768,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let no_sync = arg_matches.is_present("no_sync");
                 let ui_amount = value_t!(arg_matches, "amount", f64).ok();
                 let ui_negative_amount = value_t!(arg_matches, "neg_amount", f64).ok();
+                let exchange = Exchange::Coinbase;
+                let exchange_credentials = db.get_exchange_credentials(exchange, "").unwrap();
+                let exchange_client = exchange_client_new(exchange, exchange_credentials)?;
 
                 process_account_add(
                     &mut db,
                     rpc_client,
+                    exchange_client.as_ref(),
                     address,
                     token.into(),
                     description,
@@ -4773,6 +4791,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 process_account_sync(
                     &mut db,
                     &rpc_clients,
+                    exchange_client.as_ref(),
                     Some(address),
                     None,
                     false,
@@ -4842,9 +4861,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let all = arg_matches.is_present("all");
                 let summary = arg_matches.is_present("summary");
                 let account_filter = pubkey_of(arg_matches, "account");
+                let exchange = Exchange::Coinbase;
+                let exchange_credentials = db.get_exchange_credentials(exchange, "").unwrap();
+                let exchange_client = exchange_client_new(exchange, exchange_credentials)?;
                 process_account_list(
                     &db,
                     rpc_client,
+                    exchange_client.as_ref(),
                     account_filter,
                     all,
                     summary,
@@ -5101,9 +5124,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let force_rescan_balances = arg_matches.is_present("force_rescan_balances");
                 let max_epochs_to_process =
                     value_t!(arg_matches, "max_epochs_to_process", u64).ok();
+                let exchange = Exchange::Coinbase;
+                let exchange_credentials = db.get_exchange_credentials(exchange, "").unwrap();
+                let exchange_client = exchange_client_new(exchange, exchange_credentials)?;
                 process_account_sync(
                     &mut db,
                     &rpc_clients,
+                    exchange_client.as_ref(),
                     address,
                     max_epochs_to_process,
                     reconcile_no_sync_account_balances,
@@ -5228,10 +5255,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let for_no_less_than = value_t!(arg_matches, "for_no_less_than", f64).ok();
                 let max_coingecko_value_percentage_loss =
                     value_t_or_exit!(arg_matches, "max_coingecko_value_percentage_loss", f64);
+                let exchange = Exchange::Coinbase;
+                let exchange_credentials = db.get_exchange_credentials(exchange, "").unwrap();
+                let exchange_client = exchange_client_new(exchange, exchange_credentials)?;
 
                 process_jup_swap(
                     &mut db,
                     &rpc_clients,
+                    exchange_client.as_ref(),
                     address,
                     from_token,
                     to_token,
@@ -5275,7 +5306,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("{token} deposit address: {deposit_address}");
                 }
                 ("payment", Some(_arg_matches)) => {
-                    exchange_client()?.payment_methods().await?;
+                    let methods = exchange_client()?.payment_methods().await?;
+                    println!("{methods:#?}");
+                }
+                ("candles", Some(_arg_matches)) => {
+                    let start = Utc
+                        .with_ymd_and_hms(2026, 1, 8, 0, 0, 0)
+                        .unwrap()
+                        .timestamp();
+                    let end = Utc
+                        .with_ymd_and_hms(2026, 1, 10, 23, 59, 59)
+                        .unwrap()
+                        .timestamp();
+                    let candles = exchange_client()?
+                        .get_product_candles("SOL-USD".to_string(), start, end)
+                        .await?;
+                    println!("{candles:#?}");
                 }
                 ("pending-deposits", Some(arg_matches)) => {
                     let quiet = arg_matches.is_present("quiet");

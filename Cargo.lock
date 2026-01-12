@@ -931,7 +931,7 @@ dependencies = [
 [[package]]
 name = "coinbase-rs"
 version = "0.3.0"
-source = "git+https://github.com/dmakarov/coinbase-rs?branch=local#26a4f2cb4aac67de304cd9b44da0304d9a5b93b8"
+source = "git+https://github.com/dmakarov/coinbase-rs?branch=local#cbb8483a6ef1f042463f4ea493b8078a071c098e"
 dependencies = [
  "async-stream",
  "base64 0.10.1",
@@ -2890,8 +2890,8 @@ dependencies = [
 
 [[package]]
 name = "jup-ag"
-version = "0.9.1"
-source = "git+https://github.com/dmakarov/rust-jup-ag#011e4af61051e01f300116602c93afca39a524d3"
+version = "0.10.0"
+source = "git+https://github.com/dmakarov/rust-jup-ag#86d029b808e7c1586901ab731eabda098f6c4685"
 dependencies = [
  "base64 0.22.1",
  "bincode",

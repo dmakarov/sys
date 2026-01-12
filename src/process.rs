@@ -51,24 +51,27 @@ pub fn format_order_side(order_side: OrderSide) -> String {
 
 async fn get_block_date_and_price(
     rpc_client: &RpcClient,
+    exchange_client: &dyn ExchangeClient,
     slot: Slot,
     token: MaybeToken,
 ) -> Result<(NaiveDate, Decimal), Box<dyn std::error::Error>> {
     let block_date = rpc_client_utils::get_block_date(rpc_client, slot).await?;
     Ok((
         block_date,
-        retry_get_historical_price(rpc_client, block_date, token).await?,
+        retry_get_historical_price(exchange_client, block_date, token).await?,
     ))
 }
 
 async fn retry_get_historical_price(
-    rpc_client: &RpcClient,
+    exchange_client: &dyn ExchangeClient,
     block_date: NaiveDate,
     token: MaybeToken,
 ) -> Result<Decimal, Box<dyn std::error::Error>> {
     const NUM_RETRIES: usize = 20;
     for _ in 1..NUM_RETRIES {
-        let price = token.get_historical_price(rpc_client, block_date).await;
+        let price = token
+            .get_spot_price(exchange_client, Some(block_date))
+            .await;
         if price.is_ok() {
             return price;
         }
@@ -78,7 +81,9 @@ async fn retry_get_historical_price(
         // HTTP `Retry-After:` response header from Coin Gecko
         sleep(Duration::from_secs(5));
     }
-    token.get_historical_price(rpc_client, block_date).await
+    token
+        .get_spot_price(exchange_client, Some(block_date))
+        .await
 }
 
 fn get_jup_api_key() -> Result<String, String> {
@@ -140,6 +145,7 @@ pub async fn process_jup_quote<W: Write>(
 pub async fn process_jup_swap<T: Signers, W: Write>(
     db: &mut Db,
     rpc_clients: &RpcClients,
+    exchange_client: &dyn ExchangeClient,
     address: Pubkey,
     from_token: MaybeToken,
     to_token: MaybeToken,
@@ -162,8 +168,8 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
         .get_account(address, from_token)
         .ok_or_else(|| format!("{from_token} account does not exist for {address}"))?;
 
-    let from_token_price = from_token.get_current_price(rpc_client).await?;
-    let to_token_price = to_token.get_current_price(rpc_client).await?;
+    let from_token_price = from_token.get_spot_price(exchange_client, None).await?;
+    let to_token_price = to_token.get_spot_price(exchange_client, None).await?;
 
     if let Some(existing_signature) = existing_signature {
         db.record_swap(
@@ -279,7 +285,9 @@ pub async fn process_jup_swap<T: Signers, W: Write>(
                 jup_ag::PrioritizationFeeLamports::Exact { lamports };
         }
 
-        let mut transaction = jup_ag::swap(swap_request, jup_api_key).await?.swap_transaction;
+        let mut transaction = jup_ag::swap(swap_request, jup_api_key)
+            .await?
+            .swap_transaction;
 
         {
             let mut transaction_compute_budget = priority_fee::ComputeBudget::default();
@@ -1007,6 +1015,7 @@ pub async fn process_account_split<T: Signers, W: Write>(
 pub async fn process_account_sync<W: Write>(
     db: &mut Db,
     rpc_clients: &RpcClients,
+    exchange_client: &dyn ExchangeClient,
     address: Option<Pubkey>,
     max_epochs_to_process: Option<u64>,
     reconcile_no_sync_account_balances: bool,
@@ -1081,7 +1090,9 @@ pub async fn process_account_sync<W: Write>(
         }
     }
 
-    let current_sol_price = MaybeToken::SOL().get_current_price(rpc_client).await?;
+    let current_sol_price = MaybeToken::SOL()
+        .get_spot_price(exchange_client, None)
+        .await?;
 
     let addresses: Vec<Pubkey> = accounts
         .iter()
@@ -1137,7 +1148,8 @@ pub async fn process_account_sync<W: Write>(
 
                 let slot = inflation_reward.effective_slot;
                 let (when, price) =
-                    get_block_date_and_price(rpc_client, slot, account.token).await?;
+                    get_block_date_and_price(rpc_client, exchange_client, slot, account.token)
+                        .await?;
                 let lot = Lot {
                     lot_number: db.next_lot_number(),
                     acquisition: LotAcquistion::new(
@@ -1191,9 +1203,9 @@ pub async fn process_account_sync<W: Write>(
             )?;
         } else if current_balance > account.last_update_balance + account.token.amount(0.005) {
             let slot = epoch_info.absolute_slot;
-            let current_token_price = account.token.get_current_price(rpc_client).await?;
+            let current_token_price = account.token.get_spot_price(exchange_client, None).await?;
             let (when, decimal_price) =
-                get_block_date_and_price(rpc_client, slot, account.token).await?;
+                get_block_date_and_price(rpc_client, exchange_client, slot, account.token).await?;
             let amount = current_balance - account.last_update_balance;
 
             let lot = Lot {
